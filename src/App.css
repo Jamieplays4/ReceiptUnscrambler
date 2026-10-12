@@ -1,0 +1,390 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap');
+
+* {
+  box-sizing: border-box;
+  }
+
+html {
+background: #090c13;
+}
+
+body {
+margin: 0;
+
+background: #090c13;
+color: #e9edf5;
+
+font-family: 'Inter', sans-serif;
+
+overflow-x: hidden;
+}
+
+button {
+font: inherit;
+}
+
+.game {
+min-height: 100vh;
+
+background:
+radial-gradient(
+circle at 50% 0%,
+rgba(58, 117, 216, 0.06),
+transparent 38%
+);
+
+padding-bottom: 50px;
+}
+
+/* --------------------------------
+HEADER
+-------------------------------- */
+
+.game-header {
+height: 58px;
+
+display: flex;
+align-items: center;
+justify-content: space-between;
+
+padding: 0 6vw;
+
+border-bottom:
+1px solid
+rgba(233, 237, 245, 0.08);
+
+color: #59729d;
+
+font-family:
+'IBM Plex Mono',
+monospace;
+
+font-size: 8px;
+
+letter-spacing: 0.14em;
+}
+
+/* --------------------------------
+INTRO
+-------------------------------- */
+
+.intro {
+padding:
+80px 8vw 65px;
+
+max-width: 900px;
+}
+
+.eyebrow {
+margin: 0 0 28px;
+
+color: #3a75d8;
+
+font-family:
+'IBM Plex Mono',
+monospace;
+
+font-size: 8px;
+
+letter-spacing: 0.16em;
+}
+
+.intro h1 {
+margin: 0;
+
+color: #e9edf5;
+
+font-family:
+'EB Garamond',
+serif;
+
+font-size:
+clamp(
+64px,
+14vw,
+150px
+);
+
+font-weight: 400;
+
+line-height: 0.78;
+
+letter-spacing:
+-0.055em;
+}
+
+.intro h1 em {
+color: #59729d;
+
+font-style: italic;
+}
+
+.instructions {
+max-width: 390px;
+
+margin:
+45px 0 0;
+
+color: #7f8ca1;
+
+font-size: 12px;
+
+font-weight: 300;
+
+line-height: 1.8;
+}
+
+/* --------------------------------
+PUZZLE
+-------------------------------- */
+
+.puzzle {
+padding:
+0 6vw;
+}
+
+.puzzle-label {
+display: flex;
+
+justify-content: space-between;
+
+padding:
+0 0 14px;
+
+border-bottom:
+1px solid
+rgba(233, 237, 245, 0.1);
+
+color: #4e5c72;
+
+font-family:
+'IBM Plex Mono',
+monospace;
+
+font-size: 8px;
+
+letter-spacing: 0.13em;
+}
+
+/* --------------------------------
+WORKING AREA
+-------------------------------- */
+
+.piece-field {
+position: relative;
+
+width: 100%;
+
+height: 1100px;
+
+margin-top: 14px;
+
+overflow: hidden;
+
+background:
+rgba(
+255,
+255,
+255,
+0.012
+);
+
+border:
+1px solid
+rgba(
+233,
+237,
+245,
+0.07
+);
+}
+
+/* --------------------------------
+RECEIPT PIECES
+-------------------------------- */
+
+.receipt-piece {
+position: absolute;
+
+overflow: visible;
+
+background:
+transparent;
+
+border: none;
+
+box-shadow: none;
+
+cursor: grab;
+
+touch-action: none;
+
+user-select: none;
+
+-webkit-user-select: none;
+}
+
+.receipt-piece:active {
+cursor: grabbing;
+}
+
+.receipt-piece.selected {
+z-index: 100;
+
+filter:
+drop-shadow(
+0 10px 16px
+rgba(0, 0, 0, 0.38)
+);
+}
+
+.receipt-piece-image {
+display: block;
+
+width: 100%;
+height: 100%;
+
+object-fit: fill;
+
+pointer-events: none;
+
+user-select: none;
+
+-webkit-user-drag: none;
+}
+
+/* --------------------------------
+ROTATE BUTTON
+-------------------------------- */
+
+.rotate-handle {
+position: absolute;
+
+top: -17px;
+right: -17px;
+
+width: 35px;
+height: 35px;
+
+display: flex;
+
+align-items: center;
+justify-content: center;
+
+padding: 0;
+
+border:
+1px solid
+rgba(
+58,
+117,
+216,
+0.7
+);
+
+border-radius: 50%;
+
+background:
+#111623;
+
+color:
+#3a75d8;
+
+font-size: 18px;
+
+line-height: 1;
+
+cursor: grab;
+
+touch-action: none;
+}
+
+.rotate-handle:active {
+cursor: grabbing;
+}
+
+/* --------------------------------
+FOOTER
+-------------------------------- */
+
+.game-footer {
+display: flex;
+
+justify-content: space-between;
+
+margin-top: 30px;
+
+padding:
+20px 6vw 0;
+
+border-top:
+1px solid
+rgba(
+233,
+237,
+245,
+0.08
+);
+
+color: #4e5c72;
+
+font-family:
+'IBM Plex Mono',
+monospace;
+
+font-size: 7px;
+
+letter-spacing: 0.12em;
+}
+
+/* --------------------------------
+MOBILE
+-------------------------------- */
+
+@media (max-width: 700px) {
+
+.game-header {
+padding: 0 6vw;
+}
+
+.intro {
+padding:
+65px 6vw 50px;
+}
+
+.intro h1 {
+font-size:
+clamp(
+58px,
+18vw,
+100px
+);
+}
+
+.instructions {
+margin-top: 35px;
+}
+
+.puzzle {
+padding:
+0 5vw;
+}
+
+.piece-field {
+height: 1100px;
+}
+
+.rotate-handle {
+width: 33px;
+height: 33px;
+
+top: -15px;
+right: -15px;
+
+}
+
+.game-footer {
+padding:
+20px 5vw 0;
+}
+}
