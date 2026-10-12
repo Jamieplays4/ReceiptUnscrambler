@@ -86,7 +86,7 @@ LOAD RECEIPT
 useEffect(() => {
 const image = new Image()
 
-image.src = '/images/froyo_receipt.png'
+image.src = `${import.meta.env.BASE_URL}images/froyo_receipt.png`
 
 image.onload = () => {
   /*
