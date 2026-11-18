@@ -468,8 +468,7 @@ function App() {
           /*
           SPECIAL SPLIT: PIECE 7
           */
-
-          
+        
         if (pieceId === 7) {
           const split = splitPieceCanvas(pieceCanvas)
 
@@ -490,7 +489,21 @@ function App() {
               split.right.width / pieceCanvas.width
             )
           )
+        } else {
+          const positionIndex =
+            pieceId < 7
+              ? pieceId - 1
+              : pieceId
+
+          generatedPieces.push(
+            canvasToPiece(
+              pieceCanvas,
+              pieceId,
+              startingPositions[positionIndex]
+            )
+          )
         }
+
 
         }
       }
