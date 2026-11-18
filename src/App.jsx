@@ -59,6 +59,7 @@ function createTear(left, right, seed) {
 */
 
 
+
 function splitPieceCanvas(sourceCanvas) {
   const width = sourceCanvas.width
   const height = sourceCanvas.height
@@ -70,15 +71,37 @@ function splitPieceCanvas(sourceCanvas) {
       Math.sin(progress * Math.PI * 9 + 1.4) * 0.006
     )
 
+  const boundaries = Array.from(
+    { length: 65 },
+    (_, i) => boundaryAt(i / 64)
+  )
+
+  const minBoundary = Math.floor(Math.min(...boundaries))
+  const maxBoundary = Math.ceil(Math.max(...boundaries))
+
   function createHalf(isLeft) {
+    const cropLeft = isLeft ? 0 : minBoundary
+    const cropRight = isLeft ? maxBoundary : width
+
     const canvas = document.createElement('canvas')
 
-    canvas.width = width
+    canvas.width = cropRight - cropLeft
     canvas.height = height
 
     const ctx = canvas.getContext('2d')
 
-    ctx.drawImage(sourceCanvas, 0, 0)
+    // Preserve original pixel size and full height.
+    ctx.drawImage(
+      sourceCanvas,
+      cropLeft,
+      0,
+      canvas.width,
+      height,
+      0,
+      0,
+      canvas.width,
+      height
+    )
 
     ctx.globalCompositeOperation = 'destination-in'
     ctx.beginPath()
@@ -87,26 +110,26 @@ function splitPieceCanvas(sourceCanvas) {
       ctx.moveTo(0, 0)
 
       for (let i = 0; i <= 64; i++) {
-        const progress = i / 64
-
         ctx.lineTo(
-          boundaryAt(progress),
-          progress * height
+          boundaryAt(i / 64) - cropLeft,
+          (i / 64) * height
         )
       }
 
       ctx.lineTo(0, height)
     } else {
-      ctx.moveTo(boundaryAt(0), 0)
-      ctx.lineTo(width, 0)
-      ctx.lineTo(width, height)
+      ctx.moveTo(
+        boundaryAt(0) - cropLeft,
+        0
+      )
+
+      ctx.lineTo(canvas.width, 0)
+      ctx.lineTo(canvas.width, height)
 
       for (let i = 64; i >= 0; i--) {
-        const progress = i / 64
-
         ctx.lineTo(
-          boundaryAt(progress),
-          progress * height
+          boundaryAt(i / 64) - cropLeft,
+          (i / 64) * height
         )
       }
     }
@@ -446,40 +469,29 @@ function App() {
           SPECIAL SPLIT: PIECE 7
           */
 
-          if (pieceId === 7) {
-            const split = splitPieceCanvas(pieceCanvas)
+          
+        if (pieceId === 7) {
+          const split = splitPieceCanvas(pieceCanvas)
 
-            generatedPieces.push(
-              canvasToPiece(
-                split.left,
-                7,
-                startingPositions[6],
-                0.85
-              )
+          generatedPieces.push(
+            canvasToPiece(
+              split.left,
+              7,
+              startingPositions[6],
+              split.left.width / pieceCanvas.width
             )
+          )
 
-            generatedPieces.push(
-              canvasToPiece(
-                split.right,
-                11,
-                startingPositions[7],
-                0.15
-              )
+          generatedPieces.push(
+            canvasToPiece(
+              split.right,
+              11,
+              startingPositions[7],
+              split.right.width / pieceCanvas.width
             )
-          } else {
-            const positionIndex =
-              pieceId < 7
-                ? pieceId - 1
-                : pieceId
+          )
+        }
 
-            generatedPieces.push(
-              canvasToPiece(
-                pieceCanvas,
-                pieceId,
-                startingPositions[positionIndex]
-              )
-            )
-          }
         }
       }
 
