@@ -1,148 +1,144 @@
+
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const ROW_COUNT = 5
-const PIECE_COUNT = 10
 const OVERLAP = 6
+const TEAR_SEGMENTS = 32
 
 const startingPositions = [
-{ x: 8, y: 5, rotation: -4 },
-{ x: 55, y: 8, rotation: 3 },
-
-{ x: 10, y: 24, rotation: -3 },
-{ x: 53, y: 26, rotation: 4 },
-
-{ x: 7, y: 43, rotation: -5 },
-{ x: 55, y: 45, rotation: 2 },
-
-{ x: 12, y: 62, rotation: 3 },
-{ x: 52, y: 64, rotation: -4 },
-
-{ x: 8, y: 81, rotation: -2 },
-{ x: 54, y: 83, rotation: 4 },
+  { x: 8, y: 5, rotation: -18 },
+  { x: 55, y: 8, rotation: 12 },
+  { x: 10, y: 24, rotation: 4 },
+  { x: 53, y: 26, rotation: -21 },
+  { x: 7, y: 43, rotation: 16 },
+  { x: 55, y: 45, rotation: -8 },
+  { x: 12, y: 62, rotation: 20 },
+  { x: 38, y: 67, rotation: -14 },
+  { x: 52, y: 64, rotation: 7 },
+  { x: 8, y: 81, rotation: -23 },
+  { x: 54, y: 83, rotation: 17 },
 ]
-
-/*
-These four cuts define the horizontal
-boundaries between the five rows.
-
-left/right are percentages of the
-receipt height.
-*/
 
 const cutDefinitions = [
-{ left: 19, right: 25, seed: 1.4 },
-{ left: 40, right: 34, seed: 3.1 },
-{ left: 61, right: 68, seed: 4.7 },
-{ left: 81, right: 74, seed: 6.2 },
+  { left: 19, right: 25, seed: 1.4 },
+  { left: 40, right: 34, seed: 3.1 },
+  { left: 61, right: 68, seed: 4.7 },
+  { left: 81, right: 74, seed: 6.2 },
 ]
 
-/*
-Create an irregular diagonal tear.
-*/
-
 function createTear(left, right, seed) {
-const points = []
-const segments = 32
+  const points = []
 
-for (let i = 0; i <= segments; i++) {
-const progress = i / segments
+  for (let i = 0; i <= TEAR_SEGMENTS; i++) {
+    const progress = i / TEAR_SEGMENTS
 
-const diagonal =
-  left +
-  (right - left) * progress
+    const diagonal = left + (right - left) * progress
 
-const wave =
-  Math.sin(
-    progress * Math.PI * 5 + seed
-  ) * 0.55
+    const wave =
+      Math.sin(progress * Math.PI * 5 + seed) * 0.55
 
-const smallWave =
-  Math.sin(
-    progress * Math.PI * 13 + seed * 1.7
-  ) * 0.22
+    const smallWave =
+      Math.sin(progress * Math.PI * 13 + seed * 1.7) * 0.22
 
-points.push(
-  diagonal + wave + smallWave
-)
+    points.push(diagonal + wave + smallWave)
+  }
 
+  return points
 }
-
-return points
-}
-
-function App() {
-const [pieces, setPieces] = useState([])
-const [selectedPiece, setSelectedPiece] = useState(null)
-
-const interaction = useRef(null)
 
 /*
-------------------------------------------
-LOAD RECEIPT
-------------------------------------------
+  Split Piece 7 into two separate fragments.
+  Left side: approximately 75%.
+  Right side: approximately 25%.
 */
 
-useEffect(() => {
-const image = new Image()
+function splitPieceCanvas(sourceCanvas) {
+  const width = sourceCanvas.width
+  const height = sourceCanvas.height
 
-image.src = `${import.meta.env.BASE_URL}images/froyo_receipt.png`
+  const boundaryAt = (progress) =>
+    width * (
+      0.75 +
+      Math.sin(progress * Math.PI * 4 + 0.8) * 0.012 +
+      Math.sin(progress * Math.PI * 9 + 1.4) * 0.006
+    )
 
-image.onload = () => {
-  /*
-    Read the original PNG at its
-    native resolution.
-  */
+  function createHalf(isLeft) {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
 
-  const sourceCanvas =
-    document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(sourceCanvas, 0, 0)
 
-  sourceCanvas.width = image.naturalWidth
-  sourceCanvas.height = image.naturalHeight
+    ctx.globalCompositeOperation = 'destination-in'
+    ctx.beginPath()
 
-  const sourceContext =
-    sourceCanvas.getContext('2d', {
-      willReadFrequently: true,
-    })
+    if (isLeft) {
+      ctx.moveTo(0, 0)
+      ctx.lineTo(boundaryAt(0) + 1, 0)
 
-  sourceContext.drawImage(
-    image,
-    0,
-    0
-  )
+      for (let i = 0; i <= 64; i++) {
+        const progress = i / 64
 
-  /*
-    Find the actual visible receipt
-    inside the transparent image.
-  */
+        ctx.lineTo(
+          boundaryAt(progress) + 1,
+          progress * height
+        )
+      }
 
-  const pixels =
-    sourceContext.getImageData(
-      0,
-      0,
-      sourceCanvas.width,
-      sourceCanvas.height
-    ).data
+      ctx.lineTo(0, height)
+    } else {
+      ctx.moveTo(boundaryAt(0) - 1, 0)
+      ctx.lineTo(width, 0)
+      ctx.lineTo(width, height)
 
-  let minX = sourceCanvas.width
-  let minY = sourceCanvas.height
-  let maxX = 0
-  let maxY = 0
+      for (let i = 64; i >= 0; i--) {
+        const progress = i / 64
 
-  for (
-    let y = 0;
-    y < sourceCanvas.height;
-    y++
-  ) {
-    for (
-      let x = 0;
-      x < sourceCanvas.width;
-      x++
-    ) {
-      const alpha =
-        pixels[
-          (y * sourceCanvas.width + x) * 4 + 3
-        ]
+        ctx.lineTo(
+          boundaryAt(progress) - 1,
+          progress * height
+        )
+      }
+    }
+
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.globalCompositeOperation = 'source-over'
+
+    return trimCanvas(canvas)
+  }
+
+  return {
+    left: createHalf(true),
+    right: createHalf(false),
+  }
+}
+
+/*
+  Remove transparent margins while retaining
+  the original image proportions.
+*/
+
+function trimCanvas(source) {
+  const ctx = source.getContext('2d')
+  const { width, height } = source
+
+  const pixels = ctx.getImageData(
+    0, 0, width, height
+  ).data
+
+  let minX = width
+  let minY = height
+  let maxX = -1
+  let maxY = -1
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const alpha = pixels[(y * width + x) * 4 + 3]
 
       if (alpha > 10) {
         minX = Math.min(minX, x)
@@ -153,833 +149,611 @@ image.onload = () => {
     }
   }
 
-  /*
-    Fallback if the PNG doesn't contain
-    detectable transparency.
-  */
-
-  if (
-    minX > maxX ||
-    minY > maxY
-  ) {
-    minX = 0
-    minY = 0
-    maxX = sourceCanvas.width - 1
-    maxY = sourceCanvas.height - 1
+  if (maxX < minX || maxY < minY) {
+    return source
   }
 
-  const receiptWidth =
-    maxX - minX + 1
+  const trimmed = document.createElement('canvas')
 
-  const receiptHeight =
-    maxY - minY + 1
+  trimmed.width = maxX - minX + 1
+  trimmed.height = maxY - minY + 1
 
-  /*
-    Generate the four diagonal tears.
-  */
+  trimmed.getContext('2d').drawImage(
+    source,
+    minX,
+    minY,
+    trimmed.width,
+    trimmed.height,
+    0,
+    0,
+    trimmed.width,
+    trimmed.height
+  )
 
-  const tears =
-    cutDefinitions.map((cut) =>
-      createTear(
-        cut.left,
-        cut.right,
-        cut.seed
-      )
-    )
+  return trimmed
+}
 
-  const tearSegments = 32
-
-  /*
-    Generate the vertical tear down
-    the middle of the receipt.
-
-    It wiggles slightly around 50%.
-  */
-
-  const centerTear = []
-
-  for (
-    let i = 0;
-    i <= tearSegments;
-    i++
-  ) {
-    const progress =
-      i / tearSegments
-
-    const wave =
-      Math.sin(
-        progress * Math.PI * 5 + 1.8
-      ) * 0.7
-
-    const smallWave =
-      Math.sin(
-        progress * Math.PI * 13 + 0.6
-      ) * 0.25
-
-    centerTear.push(
-      50 + wave + smallWave
-    )
+function canvasToPiece(
+  canvas,
+  id,
+  position,
+  displayFraction = 1
+) {
+  return {
+    ...position,
+    id,
+    image: canvas.toDataURL('image/png'),
+    width: canvas.width,
+    height: canvas.height,
+    displayFraction,
   }
+}
+
+
+function App() {
+  const [pieces, setPieces] = useState([])
+  const [selectedPiece, setSelectedPiece] = useState(null)
+
+  const interaction = useRef(null)
 
   /*
-    Convert receipt-height percentage
-    into an actual Y coordinate.
+  ------------------------------------------
+  LOAD RECEIPT
+  ------------------------------------------
   */
 
-  const getY = (percentage) =>
-    minY +
-    (percentage / 100) *
-      receiptHeight
+  useEffect(() => {
+    const image = new Image()
 
-  /*
-    Convert receipt-width percentage
-    into an actual X coordinate.
-  */
+    image.src = `${import.meta.env.BASE_URL}images/froyo_receipt.png`
 
-  const getX = (percentage) =>
-    minX +
-    (percentage / 100) *
-      receiptWidth
+    image.onload = () => {
+      const sourceCanvas = document.createElement('canvas')
 
-  const generatedPieces = []
+      sourceCanvas.width = image.naturalWidth
+      sourceCanvas.height = image.naturalHeight
 
-  /*
-    --------------------------------------
-    CREATE 5 ROWS
-    --------------------------------------
-  */
+      const sourceContext = sourceCanvas.getContext('2d', {
+        willReadFrequently: true,
+      })
 
-  for (
-    let row = 0;
-    row < ROW_COUNT;
-    row++
-  ) {
-    /*
-      Top boundary.
-    */
+      sourceContext.drawImage(image, 0, 0)
 
-    const topBoundary =
-      row === 0
-        ? Array.from(
-            { length: tearSegments + 1 },
-            () => minY
-          )
-        : tears[row - 1].map(getY)
+      const pixels = sourceContext.getImageData(
+        0, 0, sourceCanvas.width, sourceCanvas.height
+      ).data
 
-    /*
-      Bottom boundary.
-    */
+      let minX = sourceCanvas.width
+      let minY = sourceCanvas.height
+      let maxX = 0
+      let maxY = 0
 
-    const bottomBoundary =
-      row === ROW_COUNT - 1
-        ? Array.from(
-            { length: tearSegments + 1 },
-            () => maxY + 1
-          )
-        : tears[row].map(getY)
+      for (let y = 0; y < sourceCanvas.height; y++) {
+        for (let x = 0; x < sourceCanvas.width; x++) {
+          const alpha =
+            pixels[(y * sourceCanvas.width + x) * 4 + 3]
 
-    /*
-      Find vertical limits for this row.
-    */
-
-    const allY = [
-      ...topBoundary,
-      ...bottomBoundary,
-    ]
-
-    const rowTop =
-      Math.min(...allY)
-
-    const rowBottom =
-      Math.max(...allY)
-
-    const cropTop =
-      Math.max(
-        minY,
-        Math.floor(
-          rowTop - OVERLAP
-        )
-      )
-
-    const cropBottom =
-      Math.min(
-        maxY + 1,
-        Math.ceil(
-          rowBottom + OVERLAP
-        )
-      )
-
-    const cropHeight =
-      cropBottom - cropTop
-
-    /*
-      ------------------------------------
-      CREATE LEFT + RIGHT PIECES
-      ------------------------------------
-    */
-
-    for (
-      let side = 0;
-      side < 2;
-      side++
-    ) {
-      /*
-        Find center tear bounds.
-      */
-
-      const centerX =
-        centerTear.map(getX)
-
-      const centerMinX =
-        Math.min(...centerX)
-
-      const centerMaxX =
-        Math.max(...centerX)
-
-      /*
-        Give both halves 6px of overlap.
-      */
-
-      let cropLeft
-      let cropRight
-
-      if (side === 0) {
-        cropLeft = minX
-
-        cropRight =
-          centerMaxX + OVERLAP
-      } else {
-        cropLeft =
-          centerMinX - OVERLAP
-
-        cropRight =
-          maxX + 1
+          if (alpha > 10) {
+            minX = Math.min(minX, x)
+            minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x)
+            maxY = Math.max(maxY, y)
+          }
+        }
       }
 
-      cropLeft =
-        Math.max(
-          minX,
-          cropLeft
-        )
+      if (minX > maxX || minY > maxY) {
+        minX = 0
+        minY = 0
+        maxX = sourceCanvas.width - 1
+        maxY = sourceCanvas.height - 1
+      }
 
-      cropRight =
-        Math.min(
-          maxX + 1,
-          cropRight
-        )
+      const receiptWidth = maxX - minX + 1
+      const receiptHeight = maxY - minY + 1
 
-      const pieceWidth =
-        cropRight - cropLeft
-
-      /*
-        Create piece canvas.
-      */
-
-      const pieceCanvas =
-        document.createElement('canvas')
-
-      pieceCanvas.width =
-        Math.round(pieceWidth)
-
-      pieceCanvas.height =
-        Math.round(cropHeight)
-
-      const pieceContext =
-        pieceCanvas.getContext('2d')
-
-      /*
-        Draw directly from the original
-        receipt image.
-
-        No stretching.
-      */
-
-      pieceContext.drawImage(
-        image,
-
-        cropLeft,
-        cropTop,
-        pieceWidth,
-        cropHeight,
-
-        0,
-        0,
-        pieceWidth,
-        cropHeight
+      const tears = cutDefinitions.map((cut) =>
+        createTear(cut.left, cut.right, cut.seed)
       )
 
-      /*
-        Create clipping path.
+      const centerTear = []
 
-        This defines the complete shape
-        of this piece.
+      for (let i = 0; i <= TEAR_SEGMENTS; i++) {
+        const progress = i / TEAR_SEGMENTS
+
+        const wave =
+          Math.sin(progress * Math.PI * 5 + 1.8) * 0.7
+
+        const smallWave =
+          Math.sin(progress * Math.PI * 13 + 0.6) * 0.25
+
+        centerTear.push(50 + wave + smallWave)
+      }
+
+      const getY = (percentage) =>
+        minY + (percentage / 100) * receiptHeight
+
+      const getX = (percentage) =>
+        minX + (percentage / 100) * receiptWidth
+
+      const centerX = centerTear.map(getX)
+
+      const centerMinX = Math.min(...centerX)
+      const centerMaxX = Math.max(...centerX)
+
+      const generatedPieces = []
+
+      /*
+      ------------------------------------------
+      CREATE FIVE ROWS
+      ------------------------------------------
       */
 
-      pieceContext.globalCompositeOperation =
-        'destination-in'
+      for (let row = 0; row < ROW_COUNT; row++) {
+        const topBoundary =
+          row === 0
+            ? Array.from(
+                { length: TEAR_SEGMENTS + 1 },
+                () => minY
+              )
+            : tears[row - 1].map(getY)
 
-      pieceContext.beginPath()
+        const bottomBoundary =
+          row === ROW_COUNT - 1
+            ? Array.from(
+                { length: TEAR_SEGMENTS + 1 },
+                () => maxY + 1
+              )
+            : tears[row].map(getY)
 
-      /*
-        TOP EDGE
+        const allY = [
+          ...topBoundary,
+          ...bottomBoundary,
+        ]
 
-        For the left piece, the top edge
-        travels from the outer left edge
-        to the center tear.
-
-        For the right piece, it travels
-        from the center tear to the
-        outer right edge.
-      */
-
-      if (side === 0) {
-        pieceContext.moveTo(
-          0,
-          topBoundary[0] - cropTop
+        const cropTop = Math.max(
+          minY,
+          Math.floor(Math.min(...allY) - OVERLAP)
         )
 
-        for (
-          let i = 0;
-          i <= tearSegments;
-          i++
-        ) {
-          const x =
-            centerX[i] -
-            cropLeft
-
-          const y =
-            topBoundary[i] -
-            cropTop
-
-          pieceContext.lineTo(
-            x,
-            y
-          )
-        }
-
-        pieceContext.lineTo(
-          pieceWidth,
-          topBoundary[
-            tearSegments
-          ] - cropTop
+        const cropBottom = Math.min(
+          maxY + 1,
+          Math.ceil(Math.max(...allY) + OVERLAP)
         )
-      } else {
-        pieceContext.moveTo(
-          centerX[0] -
+
+        const cropHeight = cropBottom - cropTop
+
+        /*
+        ------------------------------------------
+        CREATE LEFT AND RIGHT PIECES
+        ------------------------------------------
+        */
+
+        for (let side = 0; side < 2; side++) {
+          let cropLeft
+          let cropRight
+
+          if (side === 0) {
+            cropLeft = minX
+            cropRight = centerMaxX + OVERLAP
+          } else {
+            cropLeft = centerMinX - OVERLAP
+            cropRight = maxX + 1
+          }
+
+          cropLeft = Math.max(minX, cropLeft)
+          cropRight = Math.min(maxX + 1, cropRight)
+
+          const pieceWidth = cropRight - cropLeft
+
+          const pieceCanvas = document.createElement('canvas')
+
+          pieceCanvas.width = Math.round(pieceWidth)
+          pieceCanvas.height = Math.round(cropHeight)
+
+          const pieceContext = pieceCanvas.getContext('2d')
+
+          pieceContext.drawImage(
+            image,
             cropLeft,
-          topBoundary[0] -
-            cropTop
-        )
+            cropTop,
+            pieceWidth,
+            cropHeight,
+            0,
+            0,
+            pieceWidth,
+            cropHeight
+          )
 
-        for (
-          let i = 0;
-          i <= tearSegments;
-          i++
-        ) {
-          const x =
-            centerX[i] -
-            cropLeft
+          /*
+          Apply irregular tear clipping.
+          */
 
-          const y =
-            topBoundary[i] -
-            cropTop
+          pieceContext.globalCompositeOperation = 'destination-in'
+          pieceContext.beginPath()
+
+          if (side === 0) {
+            pieceContext.moveTo(
+              0,
+              topBoundary[0] - cropTop
+            )
+
+            for (let i = 0; i <= TEAR_SEGMENTS; i++) {
+              pieceContext.lineTo(
+                centerX[i] - cropLeft,
+                topBoundary[i] - cropTop
+              )
+            }
+
+            pieceContext.lineTo(
+              pieceWidth,
+              topBoundary[TEAR_SEGMENTS] - cropTop
+            )
+          } else {
+            pieceContext.moveTo(
+              centerX[0] - cropLeft,
+              topBoundary[0] - cropTop
+            )
+
+            for (let i = 0; i <= TEAR_SEGMENTS; i++) {
+              pieceContext.lineTo(
+                centerX[i] - cropLeft,
+                topBoundary[i] - cropTop
+              )
+            }
+
+            pieceContext.lineTo(
+              pieceWidth,
+              topBoundary[TEAR_SEGMENTS] - cropTop
+            )
+          }
 
           pieceContext.lineTo(
-            x,
-            y
+            pieceWidth,
+            bottomBoundary[TEAR_SEGMENTS] - cropTop
           )
+
+          for (let i = TEAR_SEGMENTS; i >= 0; i--) {
+            pieceContext.lineTo(
+              centerX[i] - cropLeft,
+              bottomBoundary[i] - cropTop
+            )
+          }
+
+          pieceContext.lineTo(
+            0,
+            bottomBoundary[0] - cropTop
+          )
+
+          pieceContext.closePath()
+          pieceContext.fill()
+
+          pieceContext.globalCompositeOperation = 'source-over'
+
+          const pieceId = row * 2 + side + 1
+
+          /*
+          SPECIAL SPLIT: PIECE 7
+          */
+
+          if (pieceId === 7) {
+            const split = splitPieceCanvas(pieceCanvas)
+
+            generatedPieces.push(
+              canvasToPiece(
+                split.left,
+                7,
+                startingPositions[6],
+                0.75
+              )
+            )
+
+            generatedPieces.push(
+              canvasToPiece(
+                split.right,
+                11,
+                startingPositions[7],
+                0.25
+              )
+            )
+          } else {
+            const positionIndex =
+              pieceId < 7
+                ? pieceId - 1
+                : pieceId
+
+            generatedPieces.push(
+              canvasToPiece(
+                pieceCanvas,
+                pieceId,
+                startingPositions[positionIndex]
+              )
+            )
+          }
         }
-
-        pieceContext.lineTo(
-          pieceWidth,
-          topBoundary[
-            tearSegments
-          ] - cropTop
-        )
       }
 
-      /*
-        RIGHT EDGE
-      */
+      setPieces(generatedPieces)
+    }
 
-      pieceContext.lineTo(
-        pieceWidth,
-        bottomBoundary[
-          tearSegments
-        ] - cropTop
+    image.onerror = () => {
+      console.error(
+        'Could not load /images/froyo_receipt.png'
       )
+    }
+  }, [])
 
-      /*
-        BOTTOM EDGE
-      */
+  
+  /*
+  ------------------------------------------
+  UPDATE PIECE
+  ------------------------------------------
+  */
 
-      for (
-        let i = tearSegments;
-        i >= 0;
-        i--
-      ) {
-        const x =
-          side === 0
-            ? centerX[i] - cropLeft
-            : centerX[i] - cropLeft
-
-        const y =
-          bottomBoundary[i] -
-          cropTop
-
-        pieceContext.lineTo(
-          x,
-          y
-        )
-      }
-
-      /*
-        LEFT EDGE
-      */
-
-      pieceContext.lineTo(
-        0,
-        bottomBoundary[0] -
-          cropTop
+  const updatePiece = (id, changes) => {
+    setPieces((current) =>
+      current.map((piece) =>
+        piece.id === id
+          ? { ...piece, ...changes }
+          : piece
       )
+    )
+  }
 
-      pieceContext.closePath()
+  /*
+  ------------------------------------------
+  START DRAG
+  ------------------------------------------
+  */
 
-      pieceContext.fill()
+  const startDrag = (event, id) => {
+    event.preventDefault()
+    event.stopPropagation()
 
-      pieceContext.globalCompositeOperation =
-        'source-over'
+    const field = event.currentTarget.parentElement
+    const fieldRect = field.getBoundingClientRect()
 
-      /*
-        Store the piece.
-      */
+    const piece = pieces.find(
+      (item) => item.id === id
+    )
 
-      const pieceIndex =
-        row * 2 + side
+    if (!piece) return
 
-      generatedPieces.push({
-        ...startingPositions[
-          pieceIndex
-        ],
+    interaction.current = {
+      type: 'drag',
+      id,
+      fieldRect,
 
-        id:
-          pieceIndex + 1,
+      offsetX:
+        event.clientX -
+        (
+          fieldRect.left +
+          (piece.x / 100) * fieldRect.width
+        ),
 
-        image:
-          pieceCanvas.toDataURL(
-            'image/png'
-          ),
+      offsetY:
+        event.clientY -
+        (
+          fieldRect.top +
+          (piece.y / 100) * fieldRect.height
+        ),
+    }
 
-        width:
-          pieceCanvas.width,
+    setSelectedPiece(id)
+  }
 
-        height:
-          pieceCanvas.height,
+  /*
+  ------------------------------------------
+  START ROTATION
+  ------------------------------------------
+  */
+
+  const startRotate = (event, id) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const pieceElement = event.currentTarget.parentElement
+    const rect = pieceElement.getBoundingClientRect()
+
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+
+    const startAngle =
+      Math.atan2(
+        event.clientY - centerY,
+        event.clientX - centerX
+      ) * (180 / Math.PI)
+
+    const piece = pieces.find(
+      (item) => item.id === id
+    )
+
+    if (!piece) return
+
+    interaction.current = {
+      type: 'rotate',
+      id,
+      centerX,
+      centerY,
+      startAngle,
+      startRotation: piece.rotation,
+    }
+
+    setSelectedPiece(id)
+  }
+
+  /*
+  ------------------------------------------
+  POINTER MOVEMENT
+  ------------------------------------------
+  */
+
+  const moveInteraction = (event) => {
+    const action = interaction.current
+
+    if (!action) return
+
+    if (action.type === 'drag') {
+      const x =
+        (
+          (
+            event.clientX -
+            action.fieldRect.left -
+            action.offsetX
+          ) /
+          action.fieldRect.width
+        ) * 100
+
+      const y =
+        (
+          (
+            event.clientY -
+            action.fieldRect.top -
+            action.offsetY
+          ) /
+          action.fieldRect.height
+        ) * 100
+
+      updatePiece(action.id, { x, y })
+    }
+
+    if (action.type === 'rotate') {
+      const currentAngle =
+        Math.atan2(
+          event.clientY - action.centerY,
+          event.clientX - action.centerX
+        ) * (180 / Math.PI)
+
+      updatePiece(action.id, {
+        rotation:
+          action.startRotation +
+          currentAngle -
+          action.startAngle,
       })
     }
   }
 
-  setPieces(
-    generatedPieces
-  )
-}
+  /*
+  ------------------------------------------
+  END INTERACTION
+  ------------------------------------------
+  */
 
-image.onerror = () => {
-  console.error(
-    'Could not load /images/froyo_receipt.png'
-  )
-}
+  const endInteraction = () => {
+    interaction.current = null
+  }
 
-}, [])
+  /*
+  ------------------------------------------
+  RENDER
+  ------------------------------------------
+  */
 
-/*
-------------------------------------------
-UPDATE PIECE
-------------------------------------------
-*/
+  return (
+    <main className="game">
 
-const updatePiece = (
-id,
-changes
-) => {
-setPieces((current) =>
-current.map((piece) =>
-piece.id === id
-? {
-...piece,
-...changes,
-}
-: piece
-)
-)
-}
+      <header className="game-header">
+        <span>221B / EVIDENCE</span>
+        <span>RECEIPT / 001</span>
+      </header>
 
-/*
-------------------------------------------
-START DRAG
-------------------------------------------
-*/
+      <section className="intro">
 
-const startDrag = (
-event,
-id
-) => {
-event.preventDefault()
-event.stopPropagation()
+        <p className="eyebrow">
+          DOCUMENT RECONSTRUCTION
+        </p>
 
-const field =
-  event.currentTarget.parentElement
+        <h1>
+          UNSCRAMBLE
+          <br />
+          <em>THE RECEIPT.</em>
+        </h1>
 
-const fieldRect =
-  field.getBoundingClientRect()
+        <p className="instructions">
+          The document has been
+          torn apart. Reconstruct
+          the receipt to reveal
+          the evidence.
+        </p>
 
-const piece =
-  pieces.find(
-    (item) =>
-      item.id === id
-  )
+      </section>
 
-if (!piece) return
+      <section className="puzzle">
 
-interaction.current = {
-  type: 'drag',
-  id,
-  fieldRect,
+        <div className="puzzle-label">
+          <span>FRAGMENTS</span>
+          <span>{pieces.length || 11} PIECES</span>
+        </div>
 
-  offsetX:
-    event.clientX -
-    (
-      fieldRect.left +
-      (
-        piece.x / 100
-      ) *
-        fieldRect.width
-    ),
+        <div
+          className="piece-field"
+          onPointerMove={moveInteraction}
+          onPointerUp={endInteraction}
+          onPointerCancel={endInteraction}
+        >
 
-  offsetY:
-    event.clientY -
-    (
-      fieldRect.top +
-      (
-        piece.y / 100
-      ) *
-        fieldRect.height
-    ),
-}
+          {pieces.map((piece) => (
 
-setSelectedPiece(id)
+            <div
+              key={piece.id}
 
-}
-
-/*
-------------------------------------------
-START ROTATION
-------------------------------------------
-*/
-
-const startRotate = (
-event,
-id
-) => {
-event.preventDefault()
-event.stopPropagation()
-
-const pieceElement =
-  event.currentTarget.parentElement
-
-const rect =
-  pieceElement.getBoundingClientRect()
-
-const centerX =
-  rect.left +
-  rect.width / 2
-
-const centerY =
-  rect.top +
-  rect.height / 2
-
-const startAngle =
-  Math.atan2(
-    event.clientY - centerY,
-    event.clientX - centerX
-  ) *
-  (180 / Math.PI)
-
-const piece =
-  pieces.find(
-    (item) =>
-      item.id === id
-  )
-
-if (!piece) return
-
-interaction.current = {
-  type: 'rotate',
-  id,
-  centerX,
-  centerY,
-  startAngle,
-  startRotation:
-    piece.rotation,
-}
-
-setSelectedPiece(id)
-
-}
-
-/*
-------------------------------------------
-POINTER MOVEMENT
-------------------------------------------
-*/
-
-const moveInteraction = (
-event
-) => {
-const action =
-interaction.current
-
-if (!action) return
-
-if (
-  action.type === 'drag'
-) {
-  const x =
-    (
-      (
-        event.clientX -
-        action.fieldRect.left -
-        action.offsetX
-      ) /
-      action.fieldRect.width
-    ) *
-    100
-
-  const y =
-    (
-      (
-        event.clientY -
-        action.fieldRect.top -
-        action.offsetY
-      ) /
-      action.fieldRect.height
-    ) *
-    100
-
-  updatePiece(
-    action.id,
-    {
-      x,
-      y,
-    }
-  )
-}
-
-if (
-  action.type === 'rotate'
-) {
-  const currentAngle =
-    Math.atan2(
-      event.clientY -
-        action.centerY,
-      event.clientX -
-        action.centerX
-    ) *
-    (180 / Math.PI)
-
-  updatePiece(
-    action.id,
-    {
-      rotation:
-        action.startRotation +
-        currentAngle -
-        action.startAngle,
-    }
-  )
-}
-
-}
-
-/*
-------------------------------------------
-END INTERACTION
-------------------------------------------
-*/
-
-const endInteraction = () => {
-interaction.current =
-null
-}
-
-/*
-------------------------------------------
-RENDER
-------------------------------------------
-*/
-
-return ( <main className="game">
-
-  <header className="game-header">
-
-    <span>
-      221B / EVIDENCE
-    </span>
-
-    <span>
-      RECEIPT / 001
-    </span>
-
-  </header>
-
-  <section className="intro">
-
-    <p className="eyebrow">
-      DOCUMENT RECONSTRUCTION
-    </p>
-
-    <h1>
-      UNSCRAMBLE
-      <br />
-      <em>
-        THE RECEIPT.
-      </em>
-    </h1>
-
-    <p className="instructions">
-      The document has been
-      torn apart. Reconstruct
-      the receipt to reveal
-      the evidence.
-    </p>
-
-  </section>
-
-  <section className="puzzle">
-
-    <div className="puzzle-label">
-
-      <span>
-        FRAGMENTS
-      </span>
-
-      <span>
-        {PIECE_COUNT} PIECES
-      </span>
-
-    </div>
-
-    <div
-      className="piece-field"
-      onPointerMove={
-        moveInteraction
-      }
-      onPointerUp={
-        endInteraction
-      }
-      onPointerCancel={
-        endInteraction
-      }
-    >
-
-      {pieces.map(
-        (piece) => (
-
-          <div
-            key={piece.id}
-
-            className={
-              `receipt-piece ${
-                selectedPiece ===
-                piece.id
+              className={`receipt-piece ${
+                selectedPiece === piece.id
                   ? 'selected'
                   : ''
-              }`
-            }
+              }`}
 
-            style={{
-              left:
-                `${piece.x}%`,
+              style={{
+                left: `${piece.x}%`,
+                top: `${piece.y}%`,
+                transform: `rotate(${piece.rotation}deg)`,
 
-              top:
-                `${piece.y}%`,
+                width: `calc(min(44vw, 220px) * ${piece.displayFraction || 1})`,
 
-              transform:
-                `rotate(${piece.rotation}deg)`,
+                aspectRatio: `${piece.width} / ${piece.height}`,
+              }}
 
-              width:
-                'min(44vw, 220px)',
-
-              aspectRatio:
-                `${piece.width} / ${piece.height}`,
-            }}
-
-            onPointerDown={
-              (event) =>
-                startDrag(
-                  event,
-                  piece.id
-                )
-            }
-          >
-
-            <img
-              className="receipt-piece-image"
-
-              src={
-                piece.image
+              onPointerDown={(event) =>
+                startDrag(event, piece.id)
               }
+            >
 
-              alt=""
+              <img
+                className="receipt-piece-image"
+                src={piece.image}
+                alt=""
+                draggable="false"
+              />
 
-              draggable="false"
-            />
+              {selectedPiece === piece.id && (
 
-            {selectedPiece ===
-              piece.id && (
+                <button
+                  className="rotate-handle"
+                  aria-label="Rotate receipt piece"
+                  onPointerDown={(event) =>
+                    startRotate(event, piece.id)
+                  }
+                >
+                  ↻
+                </button>
 
-              <button
-                className="rotate-handle"
+              )}
 
-                aria-label=
-                  "Rotate receipt piece"
+            </div>
 
-                onPointerDown={
-                  (event) =>
-                    startRotate(
-                      event,
-                      piece.id
-                    )
-                }
-              >
-                ↻
-              </button>
+          ))}
 
-            )}
+        </div>
 
-          </div>
+      </section>
 
-        )
-      )}
+      <footer className="game-footer">
+        <span>CASE / 221B</span>
+        <span>RECONSTRUCTION REQUIRED</span>
+      </footer>
 
-    </div>
-
-  </section>
-
-  <footer className="game-footer">
-
-    <span>
-      CASE / 221B
-    </span>
-
-    <span>
-      RECONSTRUCTION REQUIRED
-    </span>
-
-  </footer>
-
-</main>
-
-)
+    </main>
+  )
 }
 
 export default App
