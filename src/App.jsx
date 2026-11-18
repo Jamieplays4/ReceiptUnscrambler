@@ -7,17 +7,22 @@ const OVERLAP = 6
 const TEAR_SEGMENTS = 32
 
 const startingPositions = [
-  { x: 8, y: 5, rotation: -18 },
+  { x: 8, y: 5, rotation: 180 },
   { x: 55, y: 8, rotation: 12 },
-  { x: 10, y: 24, rotation: 4 },
+
+  { x: 10, y: 24, rotation: -180 },
   { x: 53, y: 26, rotation: -21 },
+
   { x: 7, y: 43, rotation: 16 },
-  { x: 55, y: 45, rotation: -8 },
+  { x: 55, y: 45, rotation: 180 },
+
   { x: 12, y: 62, rotation: 20 },
-  { x: 38, y: 67, rotation: -14 },
+  { x: 38, y: 67, rotation: -180 },
+
   { x: 52, y: 64, rotation: 7 },
   { x: 8, y: 81, rotation: -23 },
-  { x: 54, y: 83, rotation: 17 },
+
+  { x: 54, y: 83, rotation: 180 },
 ]
 
 const cutDefinitions = [
@@ -59,7 +64,7 @@ function splitPieceCanvas(sourceCanvas) {
 
   const boundaryAt = (progress) =>
     width * (
-      0.75 +
+      0.85 +
       Math.sin(progress * Math.PI * 4 + 0.8) * 0.012 +
       Math.sin(progress * Math.PI * 9 + 1.4) * 0.006
     )
@@ -444,7 +449,7 @@ function App() {
                 split.left,
                 7,
                 startingPositions[6],
-                0.75
+                0.85
               )
             )
 
@@ -453,7 +458,7 @@ function App() {
                 split.right,
                 11,
                 startingPositions[7],
-                0.25
+                0.15
               )
             )
           } else {
