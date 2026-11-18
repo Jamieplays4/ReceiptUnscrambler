@@ -58,6 +58,7 @@ function createTear(left, right, seed) {
   Right side: approximately 25%.
 */
 
+
 function splitPieceCanvas(sourceCanvas) {
   const width = sourceCanvas.width
   const height = sourceCanvas.height
@@ -71,39 +72,66 @@ function splitPieceCanvas(sourceCanvas) {
 
   function createHalf(isLeft) {
     const canvas = document.createElement('canvas')
-    canvas.width = width
+
+    const points = Array.from(
+      { length: 65 },
+      (_, i) => boundaryAt(i / 64)
+    )
+
+    const minBoundary = Math.floor(Math.min(...points))
+    const maxBoundary = Math.ceil(Math.max(...points))
+
+    const cropLeft = isLeft ? 0 : minBoundary
+    const cropRight = isLeft ? maxBoundary : width
+
+    canvas.width = cropRight - cropLeft
     canvas.height = height
 
     const ctx = canvas.getContext('2d')
-    ctx.drawImage(sourceCanvas, 0, 0)
+
+    // Draw at original pixel size. No image scaling.
+    ctx.drawImage(
+      sourceCanvas,
+      cropLeft,
+      0,
+      canvas.width,
+      height,
+      0,
+      0,
+      canvas.width,
+      height
+    )
 
     ctx.globalCompositeOperation = 'destination-in'
     ctx.beginPath()
 
     if (isLeft) {
       ctx.moveTo(0, 0)
-      ctx.lineTo(boundaryAt(0) + 1, 0)
 
       for (let i = 0; i <= 64; i++) {
         const progress = i / 64
 
         ctx.lineTo(
-          boundaryAt(progress) + 1,
+          boundaryAt(progress) - cropLeft,
           progress * height
         )
       }
 
       ctx.lineTo(0, height)
     } else {
-      ctx.moveTo(boundaryAt(0) - 1, 0)
-      ctx.lineTo(width, 0)
-      ctx.lineTo(width, height)
+      ctx.moveTo(
+        boundaryAt(0) - cropLeft,
+        0
+      )
+
+      ctx.lineTo(canvas.width, 0)
+      ctx.lineTo(canvas.width, height)
 
       for (let i = 64; i >= 0; i--) {
         const progress = i / 64
 
         ctx.lineTo(
-          boundaryAt(progress) - 1,
+          boundaryAt(progress) - cropLeft,
           progress * height
         )
       }
@@ -114,7 +142,7 @@ function splitPieceCanvas(sourceCanvas) {
 
     ctx.globalCompositeOperation = 'source-over'
 
-    return trimCanvas(canvas)
+    return canvas
   }
 
   return {
@@ -122,6 +150,7 @@ function splitPieceCanvas(sourceCanvas) {
     right: createHalf(false),
   }
 }
+
 
 /*
   Remove transparent margins while retaining
@@ -448,8 +477,7 @@ function App() {
               canvasToPiece(
                 split.left,
                 7,
-                startingPositions[6],
-                0.85
+                startingPositions[6]
               )
             )
 
@@ -457,8 +485,7 @@ function App() {
               canvasToPiece(
                 split.right,
                 11,
-                startingPositions[7],
-                0.15
+                startingPositions[7]
               )
             )
           } else {
@@ -713,7 +740,7 @@ function App() {
                 top: `${piece.y}%`,
                 transform: `rotate(${piece.rotation}deg)`,
 
-                width: `calc(min(44vw, 220px) * ${piece.displayFraction || 1})`,
+                width: `min(44vw, 220px)`,
 
                 aspectRatio: `${piece.width} / ${piece.height}`,
               }}
